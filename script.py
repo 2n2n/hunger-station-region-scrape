@@ -15,23 +15,45 @@ args = parser.parse_args()
 if os.path.exists(args.output) == False:
     os.makedirs(args.output)
 
-po = []
-for page in range(5):
-    print("Scanning ", "https://hungerstation.com/sa-en/regions?page="+str(page + 1))
-    page = requests.get("https://hungerstation.com/sa-en/regions?page="+str(page + 1))
-    soup = BeautifulSoup(page.content, 'html.parser')
+# 1st pass. page 1
+    # get the english version
+    # get arabic version
+# combine two arrays [...] [...]
 
-    results = soup.find_all('div', class_="Title-kEkEAm iQqayg")
+locale = { 
+    "en": "https://hungerstation.com/sa-en/regions?page=", 
+    "ar": "https://hungerstation.com/sa-ar/المناطق?page="
+} 
 
-    po = [elem.text.strip() for elem in results] + po
+regions = []
+for page in range(1,6):
+    print('executing pass :' + str(page))
+    page_regions = []
+    websites = {
+        "en": [],
+        "ar": []
+    }
+    for lang in locale: 
+        print("Scanning ", lang + str(page))
+        websites[lang] = requests.get(locale[lang] + str(page))
+        soup = BeautifulSoup(websites[lang].content, 'html.parser')
+        results = soup.find_all('div', class_="Title-kEkEAm iQqayg")
+        websites[lang] = [elem.text.strip() for elem in results]
+    
+    for idx, english_name in enumerate(websites["en"]):
+        arabic_name = websites["ar"][idx]
+        page_regions.append((english_name, arabic_name))
+    
+    regions = regions + page_regions
 
-df = pd.DataFrame(po)
+df = pd.DataFrame(regions)
 
-# # Create a Pandas Excel writer using XlsxWriter as the engine.
-writer = pd.ExcelWriter('cities.xlsx', engine='xlsxwriter')
+# Create a Pandas Excel writer using XlsxWriter as the engine.
+writer = pd.ExcelWriter(args.output + "/" + 'cities.xlsx', engine='xlsxwriter')
 
-# # Convert the dataframe to an XlsxWriter Excel object.
+# Convert the dataframe to an XlsxWriter Excel object.
 df.to_excel(writer, sheet_name='Regions')
 
-# # Close the Pandas Excel writer and output the Excel file.
+# Close the Pandas Excel writer and output the Excel file.
 writer.save()
+
